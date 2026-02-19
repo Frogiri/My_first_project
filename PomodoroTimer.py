@@ -50,6 +50,10 @@ class PomodoroTimer:
         self.current_time = self.work_time
         self.current_phase = "work"
         self.timer_thread = None
+        self.today_pomodors = 0
+        self.total_pomodors = 0
+        self.last_date = datetime.now().strftime("%Y-%m-%d")
+        self.load_stats()
         
         self.create_widgets()
     
@@ -79,6 +83,51 @@ class PomodoroTimer:
             print("Настройки сохранены")
         except Exception as e:
             print(f"Ошибка сохранения настроек: {e}")
+    def load_stats(self):
+        """Загружает статистику из файла"""
+        try:
+            if os.path.exists(self.STATS_FILE):
+                with open(self.STATS_FILE, "r", encoding="utf-8") as f:
+                    stats = json.load(f)
+                    self.total_pomodors = stats.get("total_pomodoros", 0)
+                    self.last_date = stats.get("last_date", datetime.now().strftime("%Y-%m-%d"))
+
+                    today = datetime.now().strftime("Y-%m-%d")
+                    if today == self.last_date:
+                        self.today_pomodors = stats.get("today_pomodoros", 0)
+                    else:
+                        self.today_pomodors = 0
+                    print("Статистика загружена")
+        except Exception as e:
+            print(f"Ошибка загрузки статистики: {e}")
+    def save_stats(self):
+        """Сохраняет статистику в файл"""
+        try:
+            stats = {
+                "today_pomodoros": self.today_pomodors,
+                "total_pomodoros": self.total_pomodors,
+                "last_date": self.last_date
+            }
+            with open(self.STATS_FILE, "w", encoding="utf-8") as f:
+                json.dump(stats, f, indent=4, ensure_ascii=False)
+            print("Статистика сохранена")
+        except Exception as e:
+            print(f"Ошибка сохранения статистики: {e}")
+    
+    def update_stats(self):
+        """Обновляет статистику при завершении помидорки"""
+        self.today_pomodors += 1
+        self.total_pomodors += 1
+        self.last_date = datetime.now().strftime("%Y-%m-%d")
+        self.save_stats()
+        self.update_stats_display()
+    
+    def update_stats_display(self):
+        """Обновляет отображение статистики на экране"""
+        if hasattr(self, "stats_label"):
+            self.stats_label.config(
+                text=f"📊 Сегодня: {self.today_pomodors} | Всего: {self.total_pomodors}"
+            )
     
     def load_bell_sound(self):
         """Загрузка звука колокольчика из папки souds. Если же звука нет - то ничего страшного!"""
@@ -160,7 +209,19 @@ class PomodoroTimer:
         
         control_frame = tk.Frame(self.root, bg=self.colors["bg"])
         control_frame.pack(pady=20)
-        
+
+        stats_frame = tk.Frame(self.root, bg=self.colors["bg"])
+        stats_frame.pack(pady=5)
+
+        self.stats_label = tk.Label(
+            stats_frame,
+            text=f"📊 Сегодня: {self.today_pomodors} | Всего: {self.total_pomodors}",
+            font=("Arial", 10),
+            bg=self.colors["bg"],
+            fg=self.colors["fg"]
+        )
+        self.stats_label.pack()
+
         self.start_button = self.create_button(
             control_frame,
             "▶️ Старт",
@@ -260,6 +321,8 @@ class PomodoroTimer:
         if self.current_phase == "work":
             self.cycles += 1
             self.cycles_label.config(text=f"Циклов завершено: {self.cycles}")
+
+            self.update_stats()
             
             if self.cycles % self.max_cycles == 0:
                 self.current_phase = "long_break"
