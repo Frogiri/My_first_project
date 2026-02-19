@@ -7,7 +7,13 @@ import os
 from datetime import datetime
 
 class PomodoroTimer:
+    #Здесь будет настройка таймера (в секундах!)
+    WORK_MINUTES = 25
+    SHORT_BREAK_MINUTES = 5
+    LONG_BREAK_MINUTES = 15
+    CYCLES_BEFORE_LONG_BREAK = 4
     def __init__(self, root):
+        """Создаёт и настраивает таймер, окошки и кнопки"""
         self.root = root
         self.root.title("Таймер помодоро")
         self.root.geometry("500x600")
@@ -27,11 +33,11 @@ class PomodoroTimer:
         pygame.mixer.init()
         self.load_bell_sound()
 
-        self.work_time =  25 * 60
-        self.short_break = 5 * 60
-        self.long_break = 15 * 60
+        self.work_time = self.WORK_MINUTES * 60
+        self.short_break = self.SHORT_BREAK_MINUTES * 60
+        self.long_break = self.LONG_BREAK_MINUTES * 60
         self.cycles = 0
-        self.max_cycles = 4 
+        self.max_cycles = self.CYCLES_BEFORE_LONG_BREAK 
         self.is_running = False
         self.is_paused = False
         self.current_time = self.work_time
@@ -41,7 +47,7 @@ class PomodoroTimer:
         self.create_widgets()
     
     def load_bell_sound(self):
-        """Загрузка звука колокольчика"""
+        """Загрузка звука колокольчика из папки souds. Если же звука нет - то ничего страшного!"""
         try:
             if os.path.exists("sounds") and os.path.exists("sounds/bell.wav"):
                 self.bell_sound = pygame.mixer.Sound("sounds/bell.wav")
@@ -54,11 +60,10 @@ class PomodoroTimer:
             self.bell_sound = None
     
     def play_bell(self):
-        """Воспроизведение колокольчика"""
+        """Играет звонок, когда время вышло"""
         try:
             if self.bell_sound:
                 self.bell_sound.play()
-                print("Динь-динь!")
             else:
                 print("\a")
         except Exception as e:
@@ -66,6 +71,7 @@ class PomodoroTimer:
             print("\a")
     
     def create_widgets(self):
+        """Создаёт кнопки и надписи на самом экране"""
         title_frame = tk.Frame(self.root, bg=self.colors["bg"])
         title_frame.pack(pady=20)
         
@@ -164,6 +170,7 @@ class PomodoroTimer:
         info_label.pack()
     
     def create_button(self, parent, text, command, hover_color):
+        """Делает одну красивенькую кнопку"""
         button = tk.Button(
             parent,
             text=text,
@@ -191,7 +198,7 @@ class PomodoroTimer:
         return button
     
     def update_display(self):
-        
+        """Показывает сколько времени осталось"""
         minutes = self.current_time // 60
         seconds = self.current_time % 60
         self.timer_label.config(text=f"{minutes:02d}:{seconds:02d}")
@@ -208,9 +215,7 @@ class PomodoroTimer:
             self.progress["value"] = progress_value
     
     def switch_phase(self):
-        
-        print(f"Переключение: {self.current_phase} -> ", end="")
-        
+        """Переключение между работой и отдыхом"""
         if self.current_phase == "work":
             self.cycles += 1
             self.cycles_label.config(text=f"Циклов завершено: {self.cycles}")
@@ -222,7 +227,6 @@ class PomodoroTimer:
                     text="Большой перерыв!",
                     fg=self.colors["long_break"]
                 )
-                print("большой перерыв")
             else:
                 self.current_phase = "short_break"
                 self.current_time = self.short_break
@@ -230,7 +234,6 @@ class PomodoroTimer:
                     text="Короткий отдых",
                     fg=self.colors["short_break"]
                 )
-                print("короткий отдых")
         else: 
             self.current_phase = "work"
             self.current_time = self.work_time
@@ -238,7 +241,6 @@ class PomodoroTimer:
                 text="Время работать!",
                 fg=self.colors["work"]
             )
-            print("работа")
         
         self.play_bell()
         self.update_display()
@@ -248,7 +250,7 @@ class PomodoroTimer:
         self.start_timer()  
     
     def timer_function(self):
-        
+        """Считает секунды внутри таймера"""
         while self.is_running and self.current_time > 0:
             if not self.is_paused:
                 time.sleep(1)
@@ -257,13 +259,12 @@ class PomodoroTimer:
         
         
         if self.is_running and self.current_time == 0:
-            print("Время вышло!")
             self.is_running = False  
             self.root.after(0, self.switch_phase)
 
     
     def start_timer(self):
-        
+        """Запускает таймер/отсчёт времени"""
         if not self.is_running:
             print(f"Запуск таймера: {self.current_phase}")
             self.is_running = True
@@ -274,20 +275,17 @@ class PomodoroTimer:
             self.timer_thread.start()
     
     def pause_timer(self):
-        
+        """Ставит или снимает таймер с паузы"""
         if self.is_running:
             if not self.is_paused:
                 self.is_paused = True
                 self.pause_button.config(text="▶️ Продолжить")
-                print("Пауза")
             else:
                 self.is_paused = False
                 self.pause_button.config(text="⏸️ Пауза")
-                print("Продолжение")
     
     def reset_timer(self):
-        
-        print("Сброс")
+        """Сбрасывает время"""
         self.is_running = False
         self.is_paused = False
         self.current_time = self.work_time
@@ -303,6 +301,7 @@ class PomodoroTimer:
         self.progress["value"] = 0
 
 def main():
+    """Запуск программы"""
     root = tk.Tk()
     app = PomodoroTimer(root)
     root.mainloop()
