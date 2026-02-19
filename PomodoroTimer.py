@@ -64,7 +64,6 @@ class PomodoroTimer:
         try:
             if self.bell_sound:
                 self.bell_sound.play()
-                print("Динь-динь!")
             else:
                 print("\a")
         except Exception as e:
@@ -217,8 +216,6 @@ class PomodoroTimer:
     
     def switch_phase(self):
         """Переключение между работой и отдыхом"""
-        print(f"Переключение: {self.current_phase} -> ", end="")
-        
         if self.current_phase == "work":
             self.cycles += 1
             self.cycles_label.config(text=f"Циклов завершено: {self.cycles}")
@@ -230,7 +227,6 @@ class PomodoroTimer:
                     text="Большой перерыв!",
                     fg=self.colors["long_break"]
                 )
-                print("большой перерыв")
             else:
                 self.current_phase = "short_break"
                 self.current_time = self.short_break
@@ -238,7 +234,6 @@ class PomodoroTimer:
                     text="Короткий отдых",
                     fg=self.colors["short_break"]
                 )
-                print("короткий отдых")
         else: 
             self.current_phase = "work"
             self.current_time = self.work_time
@@ -246,7 +241,6 @@ class PomodoroTimer:
                 text="Время работать!",
                 fg=self.colors["work"]
             )
-            print("работа")
         
         self.play_bell()
         self.update_display()
@@ -265,7 +259,6 @@ class PomodoroTimer:
         
         
         if self.is_running and self.current_time == 0:
-            print("Время вышло!")
             self.is_running = False  
             self.root.after(0, self.switch_phase)
 
@@ -287,15 +280,12 @@ class PomodoroTimer:
             if not self.is_paused:
                 self.is_paused = True
                 self.pause_button.config(text="▶️ Продолжить")
-                print("Пауза")
             else:
                 self.is_paused = False
                 self.pause_button.config(text="⏸️ Пауза")
-                print("Продолжение")
     
     def reset_timer(self):
         """Сбрасывает время"""
-        print("Сброс")
         self.is_running = False
         self.is_paused = False
         self.current_time = self.work_time
