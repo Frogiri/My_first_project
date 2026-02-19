@@ -7,6 +7,11 @@ import os
 from datetime import datetime
 
 class PomodoroTimer:
+    #Здесь будет настройка таймера (в секундах!)
+    WORK_MINUTES = 25
+    SHORT_BREAK_MINUTES = 5
+    LONG_BREAK_MINUTES = 15
+    CYCLES_BEFORE_LONG_BREAK = 4
     def __init__(self, root):
         """Создаёт и настраивает таймер, окошки и кнопки"""
         self.root = root
@@ -28,11 +33,11 @@ class PomodoroTimer:
         pygame.mixer.init()
         self.load_bell_sound()
 
-        self.work_time =  25 * 60
-        self.short_break = 5 * 60
-        self.long_break = 15 * 60
+        self.work_time = self.WORK_MINUTES * 60
+        self.short_break = self.SHORT_BREAK_MINUTES * 60
+        self.long_break = self.LONG_BREAK_MINUTES * 60
         self.cycles = 0
-        self.max_cycles = 4 
+        self.max_cycles = self.CYCLES_BEFORE_LONG_BREAK 
         self.is_running = False
         self.is_paused = False
         self.current_time = self.work_time
