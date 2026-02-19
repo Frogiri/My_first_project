@@ -5,13 +5,19 @@ import threading
 import pygame
 import os
 from datetime import datetime
+import json
+from tkinter import simpledialog, font
 
 class PomodoroTimer:
-    #Здесь будет настройка таймера (в секундах!)
+    # Здесь будет настройка таймера (в секундах!)
     WORK_MINUTES = 25
     SHORT_BREAK_MINUTES = 5
     LONG_BREAK_MINUTES = 15
     CYCLES_BEFORE_LONG_BREAK = 4
+
+    SETTINGS_FILE = "settings.json"
+    STATS_FILE = "stats.json"
+    
     def __init__(self, root):
         """Создаёт и настраивает таймер, окошки и кнопки"""
         self.root = root
@@ -32,7 +38,8 @@ class PomodoroTimer:
 
         pygame.mixer.init()
         self.load_bell_sound()
-
+        
+        self.load_settings()
         self.work_time = self.WORK_MINUTES * 60
         self.short_break = self.SHORT_BREAK_MINUTES * 60
         self.long_break = self.LONG_BREAK_MINUTES * 60
@@ -45,6 +52,33 @@ class PomodoroTimer:
         self.timer_thread = None
         
         self.create_widgets()
+    
+    def load_settings(self):
+        """Загружает настройки из файла"""
+        try:
+            if os.path.exists(self.SETTINGS_FILE):
+                with open(self.SETTINGS_FILE, "r", encoding="utf-8") as f:
+                    settings = json.load(f)
+                    self.WORK_MINUTES = settings.get("work_minutes", 25)
+                    self.SHORT_BREAK_MINUTES = settings.get("short_break_minutes", 5)
+                    self.LONG_BREAK_MINUTES = settings.get("long_break_minutes", 15)
+                    print("Настройки загружены")
+        except Exception as e:
+            print(f"Ошибка загрузки настроек: {e}")
+    
+    def save_settings(self):
+        """Сохраняет настройки в файл"""
+        try:
+            settings = {
+                "work_minutes": self.WORK_MINUTES,
+                "short_break_minutes": self.SHORT_BREAK_MINUTES,
+                "long_break_minutes": self.LONG_BREAK_MINUTES
+            }
+            with open(self.SETTINGS_FILE, "w", encoding="utf-8") as f:
+                json.dump(settings, f, indent=4, ensure_ascii=False)
+            print("Настройки сохранены")
+        except Exception as e:
+            print(f"Ошибка сохранения настроек: {e}")
     
     def load_bell_sound(self):
         """Загрузка звука колокольчика из папки souds. Если же звука нет - то ничего страшного!"""
@@ -139,7 +173,6 @@ class PomodoroTimer:
             control_frame,
             "⏸️ Пауза",
             self.pause_timer,
-
             self.colors["button"]
         )
         self.pause_button.pack(side="left", padx=5)
@@ -152,6 +185,14 @@ class PomodoroTimer:
             self.colors["button"]
         )
         self.reset_button.pack(side="left", padx=5)
+        
+        self.settings_button = self.create_button(
+            control_frame,
+            "⚙️ Настройки",
+            self.open_settings_window,
+            self.colors["button_hover"]
+        )
+        self.settings_button.pack(side="left", padx=5)
         
         info_frame = tk.Frame(self.root, bg=self.colors["bg"])
         info_frame.pack(side="bottom", pady=20)
@@ -245,7 +286,6 @@ class PomodoroTimer:
         self.play_bell()
         self.update_display()
         
-        
         self.is_running = False  
         self.start_timer()  
     
@@ -257,16 +297,13 @@ class PomodoroTimer:
                 self.current_time -= 1
                 self.root.after(0, self.update_display)
         
-        
         if self.is_running and self.current_time == 0:
             self.is_running = False  
             self.root.after(0, self.switch_phase)
-
     
     def start_timer(self):
         """Запускает таймер/отсчёт времени"""
         if not self.is_running:
-            print(f"Запуск таймера: {self.current_phase}")
             self.is_running = True
             self.is_paused = False
             self.start_button.config(state="disabled")
@@ -299,6 +336,119 @@ class PomodoroTimer:
         
         self.update_display()
         self.progress["value"] = 0
+    
+    def open_settings_window(self):
+        """Открывает окно настроек"""
+        settings_window = tk.Toplevel(self.root)
+        settings_window.title("Настройки таймера")
+        settings_window.geometry("300x250")
+        settings_window.configure(bg=self.colors["bg"])
+        settings_window.resizable(False, False)
+
+        title_label = tk.Label(
+            settings_window,
+            text="Настройки времени",
+            font=("Arial", 14, "bold"),
+            bg=self.colors["bg"],
+            fg=self.colors["fg"]
+        )
+        title_label.pack(pady=15)
+
+        settings_frame = tk.Frame(settings_window, bg=self.colors["bg"])
+        settings_frame.pack(pady=10)
+
+        work_label = tk.Label(
+            settings_frame,
+            text="Работа (минут):",
+            bg=self.colors["bg"],
+            fg=self.colors["fg"],
+            font=("Arial", 10)
+        )
+        work_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+
+        work_var = tk.IntVar(value=self.WORK_MINUTES)
+        work_entry = tk.Entry(
+            settings_frame,
+            textvariable=work_var,
+            width=10,
+            font=("Arial", 10)
+        )
+        work_entry.grid(row=0, column=1, padx=10, pady=5)
+
+        short_label = tk.Label(
+            settings_frame,
+            text="Короткий отдых: ",
+            bg=self.colors["bg"],
+            fg=self.colors["fg"],
+            font=("Arial", 10)
+        )
+        short_label.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+
+        short_var = tk.IntVar(value=self.SHORT_BREAK_MINUTES)
+        short_entry = tk.Entry(
+            settings_frame,
+            textvariable=short_var,
+            width=10,
+            font=("Arial", 10)
+        )
+        short_entry.grid(row=1, column=1, padx=10, pady=5)
+
+        long_label = tk.Label(
+            settings_frame,
+            text="Длинный отдых:",
+            bg=self.colors["bg"],
+            fg=self.colors["fg"],
+            font=("Arial", 10)
+        )
+        long_label.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+    
+        long_var = tk.IntVar(value=self.LONG_BREAK_MINUTES)
+        long_entry = tk.Entry(
+            settings_frame,
+            textvariable=long_var,
+            width=10,
+            font=("Arial", 10)
+        )
+        long_entry.grid(row=2, column=1, padx=10, pady=5)
+    
+        # Кнопки
+        button_frame = tk.Frame(settings_window, bg=self.colors["bg"])
+        button_frame.pack(pady=20)
+        
+        def save_and_close():
+            """Сохраняет настройки и закрывает окно"""
+            if work_var.get() > 0 and short_var.get() > 0 and long_var.get() > 0:
+                self.WORK_MINUTES = work_var.get()
+                self.SHORT_BREAK_MINUTES = short_var.get()
+                self.LONG_BREAK_MINUTES = long_var.get()
+                self.save_settings()
+                self.reset_timer()
+                
+                settings_window.destroy()
+            else:
+                messagebox.showerror("Ошибка", "Все значения должны быть положительными!")
+        
+        save_button = tk.Button(
+            button_frame,
+            text="Сохранить",
+            command=save_and_close,
+            bg=self.colors["button"],
+            fg=self.colors["fg"],
+            padx=20,
+            pady=5
+        )
+        save_button.pack(side="left", padx=10)
+        
+        cancel_button = tk.Button(
+            button_frame,
+            text="Отмена",
+            command=settings_window.destroy,
+            bg=self.colors["button"],
+            fg=self.colors["fg"],
+            padx=20,
+            pady=5
+        )
+        cancel_button.pack(side="left", padx=10)
 
 def main():
     """Запуск программы"""
