@@ -8,7 +8,6 @@ import sys
 from datetime import datetime
 import json
 from tkinter import simpledialog, font
-from plyer import notification
 
 
 class PomodoroTimer:
@@ -101,6 +100,7 @@ class PomodoroTimer:
         self.last_date = datetime.now().strftime("%Y-%m-%d")
         self.load_stats()
 
+
         self.create_widgets()
         
     
@@ -171,6 +171,7 @@ class PomodoroTimer:
         except Exception as e:
             print(f"Ошибка сохранения статистики: {e}")
 
+
     def update_stats(self):
         self.today_pomodoros += 1
         self.total_pomodoros += 1
@@ -211,14 +212,9 @@ class PomodoroTimer:
             print("\a")
     
     def send_notification(self, title, message):
-        """Отправляет уведосление в Windows"""
+        """Отправляет уведомление в виде окошка"""
         try:
-            notification.notify(
-                title = title,
-                message=message,
-                app_name = "Помодоро Таймер",
-                timeout = 5
-            )
+            self.root.after(0, lambda: messagebox.showinfo(title, message))
         except Exception as e:
             print(f"Ошибка уведомления: {e}")
 
@@ -277,6 +273,7 @@ class PomodoroTimer:
         
         stats_frame = tk.Frame(self.root, bg=self.colors["bg"])
         stats_frame.pack(pady=5)
+
 
         self.stats_label = tk.Label(
             stats_frame,
@@ -393,6 +390,8 @@ class PomodoroTimer:
             if isinstance(widget, tk.Frame):
                 for child in widget.winfo_children():
                     if isinstance(child, tk.Label) and "минут работа" in child.cget("text"):
+
+
                         child.config(text=f"{self.WORK_MINUTES} минут работы > {self.SHORT_BREAK_MINUTES} минут отдыха\n{self.CYCLES_BEFORE_LONG_BREAK} цикла > {self.LONG_BREAK_MINUTES} минут большой перерыв")
                         return
     
@@ -491,6 +490,7 @@ class PomodoroTimer:
         settings_window.geometry("400x400")
         settings_window.configure(bg=self.colors["bg"])
         settings_window.resizable(False, False)
+
 
         tab_control = ttk.Notebook(settings_window)
         
@@ -613,6 +613,7 @@ class PomodoroTimer:
                 self.WORK_MINUTES = work_var.get()
                 self.SHORT_BREAK_MINUTES = short_var.get()
                 self.LONG_BREAK_MINUTES = long_var.get()
+
 
                 self.work_time = self.WORK_MINUTES * 60
                 self.short_break = self.SHORT_BREAK_MINUTES * 60
