@@ -7,8 +7,16 @@ import os
 import sys
 from datetime import datetime
 import json
+import random
 from tkinter import simpledialog, font
+import math
 
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 class PomodoroTimer:
     WORK_MINUTES = 25
@@ -25,7 +33,6 @@ class PomodoroTimer:
     SETTINGS_FILE = os.path.join(get_app_folder(), "settings.json")
     STATS_FILE = os.path.join(get_app_folder(), "stats.json")
 
-    
     THEMES = {
         "Классическая (тёмная)": {
             "bg": "#2c3e50",
@@ -152,13 +159,85 @@ class PomodoroTimer:
             "long_break": "#c6d8b9",
             "button": "#e3d8c5",
             "button_hover": "#ffb6b9"
+        },
+        "Винтаж": {
+            "bg": "#8d6e63",
+            "fg": "#efebe9",
+            "work": "#bf360c",
+            "short_break": "#4e342e",
+            "long_break": "#6d4c41",
+            "button": "#5d4037",
+            "button_hover": "#8d6e63"
+        },
+        "Хаки": {
+            "bg": "#4b6b4b",
+            "fg": "#f0f0d0",
+            "work": "#a67c52",
+            "short_break": "#2b4b2b",
+            "long_break": "#6b8e6b",
+            "button": "#3b5b3b",
+            "button_hover": "#5b7b5b"
+        },
+        "Персиковая": {
+            "bg": "#ffcc99",
+            "fg": "#663300",
+            "work": "#ff6666",
+            "short_break": "#ffb366",
+            "long_break": "#ff99bb",
+            "button": "#ffb366",
+            "button_hover": "#ff9966"
+        },
+        "Мятный коктейль": {
+            "bg": "#b8e0d4",
+            "fg": "#1a4d3e",
+            "work": "#ff6b6b",
+            "short_break": "#4ecdc4",
+            "long_break": "#ffe66d",
+            "button": "#98d9c9",
+            "button_hover": "#b8f0e4"
+        },
+        "Градиент": {
+            "bg": "#4a569d",
+            "fg": "#ffffff",
+            "work": "#ff6b6b",
+            "short_break": "#4ecdc4",
+            "long_break": "#ffe66d",
+            "button": "#4a569d",
+            "button_hover": "#6a76bd"
+        },
+        "Пурпурный закат": {
+            "bg": "#6a4c93",
+            "fg": "#f5f0f6",
+            "work": "#f25f5c",
+            "short_break": "#ffd166",
+            "long_break": "#9e7bb5",
+            "button": "#563d7c",
+            "button_hover": "#7a5aa7"
+        },
+        "Океанская волна": {
+            "bg": "#1b4d6e",
+            "fg": "#e0f2fe",
+            "work": "#f28482",
+            "short_break": "#84a7a1",
+            "long_break": "#b3d0d9",
+            "button": "#2c5f7e",
+            "button_hover": "#3c6f8e"
+        },
+        "Ягодный": {
+            "bg": "#9c4f7d",
+            "fg": "#fde9f0",
+            "work": "#f9a826",
+            "short_break": "#c44569",
+            "long_break": "#e6a2c0",
+            "button": "#873e6b",
+            "button_hover": "#b45f93"
         }
     }
     
     def __init__(self, root):
         self.root = root
         self.root.title("Таймер помодоро")
-        self.root.geometry("500x600")
+        self.root.geometry("500x650")
         self.root.resizable(False, False)
 
         self.colors = self.THEMES["Классическая (тёмная)"]
@@ -185,15 +264,77 @@ class PomodoroTimer:
         self.timer_thread = None
         self.next_second = 0
         self.volume = 70
+        self.no_pause_streak = 0
+        self.no_reset_streak = 0
+        
+        self.pulse_alpha = 1.0
+        self.pulse_direction = -0.03
+        self.angle = 0
+        self.button_scale = 1.0
+        self.button_grow = True
 
         self.today_pomodoros = 0
         self.total_pomodoros = 0
         self.last_date = datetime.now().strftime("%Y-%m-%d")
         self.load_stats()
-
+        
+        self.achievements = {
+            "first_pomodoro": {"name": "🍅 Первый помидор", "desc": "Завершите первый цикл работы", "unlocked": False},
+            "early_bird": {"name": "🐦 Ранняя пташка", "desc": "5 помидорок до 10 утра", "unlocked": False, "progress": 0, "target": 5},
+            "marathon": {"name": "🏃 Марафонец", "desc": "100 помидорок всего", "unlocked": False, "progress": 0, "target": 100},
+            "no_pause": {"name": "🎯 Без пауз", "desc": "10 помидорок подряд без пауз", "unlocked": False, "progress": 0, "target": 10},
+            "workaholic": {"name": "💪 Трудоголик", "desc": "20 помидорок за день", "unlocked": False, "progress": 0, "target": 20},
+            "night_owl": {"name": "🦉 Полуночник", "desc": "Помидорка после полуночи", "unlocked": False},
+            "master_focus": {"name": "🧘 Мастер фокуса", "desc": "10 раз подряд без сброса", "unlocked": False, "progress": 0, "target": 10},
+            "colorful": {"name": "🌈 Разноцветный", "desc": "Использовать все темы", "unlocked": False, "progress": 0, "target": 20}
+        }
 
         self.create_widgets()
-        
+        self.start_animations()
+    
+    def load_bell_sound(self):
+        try:
+            possible_paths = []
+            
+            if getattr(sys, 'frozen', False):
+                exe_dir = os.path.dirname(sys.executable)
+                possible_paths.append(os.path.join(exe_dir, 'sounds', 'bell.wav'))
+            else:
+                possible_paths.append(os.path.join(os.path.dirname(__file__), 'sounds', 'bell.wav'))
+            
+            possible_paths.append(os.path.join(os.getcwd(), 'sounds', 'bell.wav'))
+            possible_paths.append('sounds/bell.wav')
+            
+            try:
+                possible_paths.append(resource_path('sounds/bell.wav'))
+            except:
+                pass
+            
+            for path in possible_paths:
+                if os.path.exists(path):
+                    self.bell_sound = pygame.mixer.Sound(path)
+                    if hasattr(self, "volume"):
+                        self.bell_sound.set_volume(self.volume / 100)
+                    print(f"Звук колокольчика загружен")
+                    print(f"Путь: {path}")
+                    return
+            
+            self.bell_sound = None
+            print("Звук колокольчика не найден")
+            
+        except Exception as e:
+            print(f"Ошибка загрузки звука: {e}")
+            self.bell_sound = None
+    
+    def play_bell(self):
+        try:
+            if self.bell_sound:
+                self.bell_sound.play()
+            else:
+                print("\a")
+        except Exception as e:
+            print(f"Ошибка воспроизведения: {e}")
+            print("\a")
     
     def load_settings(self):
         try:
@@ -247,16 +388,33 @@ class PomodoroTimer:
                         self.today_pomodoros = stats.get("today_pomodoros", 0)
                     else:
                         self.today_pomodoros = 0
+                    
+                    if "achievements" in stats:
+                        for ach_id, ach_data in stats["achievements"].items():
+                            if ach_id in self.achievements:
+                                self.achievements[ach_id]["unlocked"] = ach_data.get("unlocked", False)
+                                if "progress" in self.achievements[ach_id]:
+                                    self.achievements[ach_id]["progress"] = ach_data.get("progress", 0)
+                    
                     print("Статистика загружена")
         except Exception as e:
             print(f"Ошибка загрузки статистики: {e}")
 
     def save_stats(self):
         try:
+            achievements_data = {}
+            for ach_id, ach_data in self.achievements.items():
+                achievements_data[ach_id] = {
+                    "unlocked": ach_data["unlocked"]
+                }
+                if "progress" in ach_data:
+                    achievements_data[ach_id]["progress"] = ach_data["progress"]
+            
             stats = {
                 "today_pomodoros": self.today_pomodoros,
                 "total_pomodoros": self.total_pomodoros,
-                "last_date": self.last_date
+                "last_date": self.last_date,
+                "achievements": achievements_data
             }
             with open(self.STATS_FILE, "w", encoding="utf-8") as f:
                 json.dump(stats, f, indent=4, ensure_ascii=False)
@@ -264,13 +422,75 @@ class PomodoroTimer:
         except Exception as e:
             print(f"Ошибка сохранения статистики: {e}")
 
-
     def update_stats(self):
         self.today_pomodoros += 1
         self.total_pomodoros += 1
         self.last_date = datetime.now().strftime("%Y-%m-%d")
+        self.no_pause_streak += 1
+        self.no_reset_streak += 1
         self.save_stats()
         self.update_stats_display()
+        self.check_achievements()
+    
+    def check_achievements(self):
+        if not self.achievements["first_pomodoro"]["unlocked"] and self.total_pomodoros >= 1:
+            self.achievements["first_pomodoro"]["unlocked"] = True
+            self.show_achievement_notification("🍅 Первый помидор")
+        
+        hour = datetime.now().hour
+        if hour < 10:
+            self.achievements["early_bird"]["progress"] += 1
+            if self.achievements["early_bird"]["progress"] >= self.achievements["early_bird"]["target"]:
+                self.achievements["early_bird"]["unlocked"] = True
+                self.show_achievement_notification("🐦 Ранняя пташка")
+        
+        self.achievements["marathon"]["progress"] = self.total_pomodoros
+        if self.total_pomodoros >= 100:
+            self.achievements["marathon"]["unlocked"] = True
+            self.show_achievement_notification("🏃 Марафонец")
+        
+        if hour == 0 and not self.achievements["night_owl"]["unlocked"]:
+            self.achievements["night_owl"]["unlocked"] = True
+            self.show_achievement_notification("🦉 Полуночник")
+        
+        self.achievements["workaholic"]["progress"] = self.today_pomodoros
+        if self.today_pomodoros >= 20:
+            self.achievements["workaholic"]["unlocked"] = True
+            self.show_achievement_notification("💪 Трудоголик")
+        
+        if not self.achievements["no_pause"]["unlocked"]:
+            self.achievements["no_pause"]["progress"] = self.no_pause_streak
+            if self.no_pause_streak >= 10:
+                self.achievements["no_pause"]["unlocked"] = True
+                self.show_achievement_notification("🎯 Без пауз")
+        
+        if not self.achievements["master_focus"]["unlocked"]:
+            self.achievements["master_focus"]["progress"] = self.no_reset_streak
+            if self.no_reset_streak >= 10:
+                self.achievements["master_focus"]["unlocked"] = True
+                self.show_achievement_notification("🧘 Мастер фокуса")
+        
+        used_themes = len(set([self.current_theme]))
+        self.achievements["colorful"]["progress"] = used_themes
+        if used_themes >= 20:
+            self.achievements["colorful"]["unlocked"] = True
+            self.show_achievement_notification("🌈 Разноцветный")
+
+    def show_achievement_notification(self, achievement_name):
+        try:
+            self.root.after(0, lambda: messagebox.showinfo(
+                "🏆 Достижение получено!", 
+                f"Вы разблокировали: {achievement_name}"
+            ))
+        except Exception as e:
+            print(f"Ошибка уведомления: {e}")
+    
+    def count_unlocked_achievements(self):
+        count = 0
+        for ach in self.achievements.values():
+            if ach["unlocked"]:
+                count += 1
+        return count
     
     def apply_theme(self):
         self.root.configure(bg=self.colors["bg"])
@@ -282,36 +502,68 @@ class PomodoroTimer:
         self.update_display()
         self.update_info_text()
     
-    def load_bell_sound(self):
-        try:
-            if os.path.exists("sounds") and os.path.exists("sounds/bell.wav"):
-                self.bell_sound = pygame.mixer.Sound("sounds/bell.wav")
-                if hasattr(self, "volume"):
-                    self.bell_sound.set_volume(self.volume / 100)
-                print(f"Звук колокольчика загружен, громкость: {self.volume}%")
-            else:
-                self.bell_sound = None
-                print("Звук колокольчика не найден, будет системный звук")
-        except Exception as e:
-            print(f"Ошибка загрузки звука: {e}")
-            self.bell_sound = None
-    
-    def play_bell(self):
-        try:
-            if self.bell_sound:
-                self.bell_sound.play()
-            else:
-                print("\a")
-        except Exception as e:
-            print(f"Ошибка воспроизведения: {e}")
-            print("\a")
-    
     def send_notification(self, title, message):
-        """Отправляет уведомление в виде окошка"""
         try:
             self.root.after(0, lambda: messagebox.showinfo(title, message))
         except Exception as e:
             print(f"Ошибка уведомления: {e}")
+
+    def start_animations(self):
+        self.pulse_animation()
+        self.rotate_animation()
+        self.button_animation()
+
+    def pulse_animation(self):
+        if self.is_running and self.current_time <= 300:
+            self.pulse_alpha += self.pulse_direction
+            if self.pulse_alpha <= 0.5 or self.pulse_alpha >= 1.0:
+                self.pulse_direction *= -1
+            
+            if hasattr(self, 'timer_label'):
+                if self.current_phase == "work":
+                    color = self.colors["work"]
+                else:
+                    color = self.colors["fg"]
+                
+                self.timer_label.config(fg=self.adjust_color_alpha(color, self.pulse_alpha))
+        
+        self.root.after(50, self.pulse_animation)
+
+    def adjust_color_alpha(self, color, alpha):
+        if color.startswith('#'):
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+            
+            r = int(r * alpha)
+            g = int(g * alpha)
+            b = int(b * alpha)
+            
+            return f'#{r:02x}{g:02x}{b:02x}'
+        return color
+
+    def rotate_animation(self):
+        self.angle += 2
+        if self.angle >= 360:
+            self.angle = 0
+        
+        if hasattr(self, 'progress'):
+            style = ttk.Style()
+            style.configure("color.Horizontal.TProgressbar", background=self.colors["work"])
+        
+        self.root.after(50, self.rotate_animation)
+
+    def button_animation(self):
+        if self.button_grow:
+            self.button_scale += 0.01
+            if self.button_scale >= 1.1:
+                self.button_grow = False
+        else:
+            self.button_scale -= 0.01
+            if self.button_scale <= 0.95:
+                self.button_grow = True
+        
+        self.root.after(100, self.button_animation)
 
     def create_widgets(self):
         title_frame = tk.Frame(self.root, bg=self.colors["bg"])
@@ -369,7 +621,6 @@ class PomodoroTimer:
         stats_frame = tk.Frame(self.root, bg=self.colors["bg"])
         stats_frame.pack(pady=5)
 
-
         self.stats_label = tk.Label(
             stats_frame,
             text=f"📊 Сегодня: {self.today_pomodoros} | Всего: {self.total_pomodoros}",
@@ -415,6 +666,14 @@ class PomodoroTimer:
         )
         self.settings_button.pack(side="left", padx=5)
         
+        self.achievements_button = self.create_button(
+            control_frame,
+            "🏆 Достижения",
+            self.open_achievements_window,
+            self.colors["button_hover"]
+        )
+        self.achievements_button.pack(side="left", padx=5)
+        
         info_frame = tk.Frame(self.root, bg=self.colors["bg"])
         info_frame.pack(side="bottom", pady=20)
         
@@ -449,9 +708,11 @@ class PomodoroTimer:
         
         def on_enter(e):
             button["background"] = hover_color
+            button.config(font=("Arial", 12, "bold"))
         
         def on_leave(e):
             button["background"] = self.colors["button"]
+            button.config(font=("Arial", 11))
         
         button.bind("<Enter>", on_enter)
         button.bind("<Leave>", on_leave)
@@ -481,7 +742,6 @@ class PomodoroTimer:
             )
     
     def update_info_text(self):
-        """Обновляет информационный текст внизу экрана"""
         if hasattr(self, 'info_label'):
             self.info_label.config(
                 text=f"{self.WORK_MINUTES} минут работа → {self.SHORT_BREAK_MINUTES} минут отдыха\n{self.CYCLES_BEFORE_LONG_BREAK} цикла → {self.LONG_BREAK_MINUTES} минут большой перерыв"
@@ -519,7 +779,6 @@ class PomodoroTimer:
             )
             self.send_notification("🍅 Помодоро", f"Отдых закончен! {self.WORK_MINUTES} минут работы")
 
-        
         self.play_bell()
         self.update_display()
         
@@ -557,6 +816,7 @@ class PomodoroTimer:
             if not self.is_paused:
                 self.is_paused = True
                 self.pause_button.config(text="▶️ Продолжить")
+                self.no_pause_streak = 0
             else:
                 self.is_paused = False
                 self.pause_button.config(text="⏸️ Пауза")
@@ -569,6 +829,7 @@ class PomodoroTimer:
         self.phase_label.config(text="Время работать!", fg=self.colors["work"])
         self.cycles = 0
         self.cycles_label.config(text="Циклов завершено: 0")
+        self.no_reset_streak = 0
         
         self.start_button.config(state="normal")
         self.pause_button.config(state="disabled", text="⏸️ Пауза")
@@ -576,13 +837,118 @@ class PomodoroTimer:
         self.update_display()
         self.progress["value"] = 0
     
+    def open_achievements_window(self):
+        ach_window = tk.Toplevel(self.root)
+        ach_window.title("Достижения")
+        ach_window.geometry("400x500")
+        ach_window.configure(bg=self.colors["bg"])
+        ach_window.resizable(False, False)
+
+        title_label = tk.Label(
+            ach_window,
+            text="🏆 Ваши достижения",
+            font=("Arial", 16, "bold"),
+            bg=self.colors["bg"],
+            fg=self.colors["fg"]
+        )
+        title_label.pack(pady=15)
+
+        stats_text = f"Всего помидорок: {self.total_pomodoros}\n"
+        stats_text += f"Разблокировано: {self.count_unlocked_achievements()}/{len(self.achievements)}"
+        
+        stats_label = tk.Label(
+            ach_window,
+            text=stats_text,
+            font=("Arial", 11),
+            bg=self.colors["bg"],
+            fg=self.colors["fg"],
+            justify="center"
+        )
+        stats_label.pack(pady=10)
+
+        canvas = tk.Canvas(ach_window, bg=self.colors["bg"], highlightthickness=0)
+        scrollbar = tk.Scrollbar(ach_window, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg=self.colors["bg"])
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        for ach_id, ach_data in self.achievements.items():
+            ach_frame = tk.Frame(scrollable_frame, bg=self.colors["bg"], relief="ridge", bd=1)
+            ach_frame.pack(fill="x", padx=10, pady=5)
+
+            title_frame = tk.Frame(ach_frame, bg=self.colors["bg"])
+            title_frame.pack(fill="x", padx=5, pady=2)
+
+            status = "✅" if ach_data["unlocked"] else "⏳"
+            name_label = tk.Label(
+                title_frame,
+                text=f"{status} {ach_data['name']}",
+                font=("Arial", 11, "bold"),
+                bg=self.colors["bg"],
+                fg=self.colors["fg"],
+                anchor="w"
+            )
+            name_label.pack(side="left")
+
+            desc_label = tk.Label(
+                ach_frame,
+                text=ach_data["desc"],
+                font=("Arial", 9),
+                bg=self.colors["bg"],
+                fg="#95a5a6",
+                anchor="w",
+                justify="left"
+            )
+            desc_label.pack(fill="x", padx=5, pady=2)
+
+            if not ach_data["unlocked"] and "progress" in ach_data and "target" in ach_data:
+                progress_frame = tk.Frame(ach_frame, bg=self.colors["bg"])
+                progress_frame.pack(fill="x", padx=5, pady=5)
+
+                progress_text = f"{ach_data['progress']}/{ach_data['target']}"
+                progress_label = tk.Label(
+                    progress_frame,
+                    text=progress_text,
+                    font=("Arial", 8),
+                    bg=self.colors["bg"],
+                    fg=self.colors["fg"]
+                )
+                progress_label.pack(side="right")
+
+                progress_bar = ttk.Progressbar(
+                    progress_frame,
+                    length=200,
+                    mode="determinate",
+                    value=(ach_data['progress'] / ach_data['target']) * 100
+                )
+                progress_bar.pack(side="left", fill="x", expand=True)
+
+        canvas.pack(side="left", fill="both", expand=True, padx=10)
+        scrollbar.pack(side="right", fill="y")
+
+        close_button = tk.Button(
+            ach_window,
+            text="Закрыть",
+            command=ach_window.destroy,
+            bg=self.colors["button"],
+            fg=self.colors["fg"],
+            padx=20,
+            pady=5
+        )
+        close_button.pack(pady=15)
+    
     def open_settings_window(self):
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Настройки таймера")
-        settings_window.geometry("450x500")
+        settings_window.geometry("450x550")
         settings_window.configure(bg=self.colors["bg"])
         settings_window.resizable(False, False)
-
 
         tab_control = ttk.Notebook(settings_window)
         
@@ -597,7 +963,6 @@ class PomodoroTimer:
         
         tab_control.pack(expand=1, fill="both", padx=10, pady=10)
 
-        
         title_label = tk.Label(
             time_tab,
             text="Настройки времени",
@@ -664,7 +1029,6 @@ class PomodoroTimer:
         )
         long_entry.grid(row=2, column=1, padx=10, pady=5)
 
-        
         theme_label = tk.Label(
             color_tab,
             text="Выберите тему оформления",
@@ -674,7 +1038,6 @@ class PomodoroTimer:
         )
         theme_label.pack(pady=15)
 
-        # Создаём прокрутку
         canvas = tk.Canvas(color_tab, bg=self.colors["bg"], highlightthickness=0)
         scrollbar = tk.Scrollbar(color_tab, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg=self.colors["bg"])
@@ -702,12 +1065,12 @@ class PomodoroTimer:
                 bg=self.colors["bg"],
                 fg=self.colors["fg"],
                 selectcolor=self.colors["bg"],
-                font=("Arial", 10)
+                font=("Arial", 9)
             )
-            theme_btn.grid(row=row, column=col, padx=20, pady=5, sticky="w")
+            theme_btn.grid(row=row, column=col, padx=10, pady=3, sticky="w")
             
-            colors_preview = tk.Frame(theme_frame, bg=self.THEMES[theme_name]["bg"], width=30, height=20)
-            colors_preview.grid(row=row, column=col+1, padx=5, pady=5)
+            colors_preview = tk.Frame(theme_frame, bg=self.THEMES[theme_name]["bg"], width=20, height=15)
+            colors_preview.grid(row=row, column=col+1, padx=5, pady=3)
             
             col += 2
             if col > 3:
@@ -717,7 +1080,6 @@ class PomodoroTimer:
         canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
         scrollbar.pack(side="right", fill="y")
 
-        
         sound_label = tk.Label(
             sound_tab,
             text="Настройки звука",
@@ -762,7 +1124,6 @@ class PomodoroTimer:
         )
         volume_scale.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
 
-
         button_frame = tk.Frame(settings_window, bg=self.colors["bg"])
         button_frame.pack(pady=20)
         
@@ -771,7 +1132,6 @@ class PomodoroTimer:
                 self.WORK_MINUTES = work_var.get()
                 self.SHORT_BREAK_MINUTES = short_var.get()
                 self.LONG_BREAK_MINUTES = long_var.get()
-
 
                 self.work_time = self.WORK_MINUTES * 60
                 self.short_break = self.SHORT_BREAK_MINUTES * 60
