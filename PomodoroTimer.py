@@ -4,28 +4,31 @@ import time
 import threading
 import pygame
 import os
+import sys
 from datetime import datetime
 import json
 from tkinter import simpledialog, font
+from plyer import notification
+
 
 class PomodoroTimer:
-    # Здесь будет настройка таймера (в секундах!)
     WORK_MINUTES = 25
     SHORT_BREAK_MINUTES = 5
     LONG_BREAK_MINUTES = 15
     CYCLES_BEFORE_LONG_BREAK = 4
 
-    SETTINGS_FILE = "settings.json"
-    STATS_FILE = "stats.json"
+    @staticmethod
+    def get_app_folder():
+        if getattr(sys, "frozen", False):
+            return os.path.dirname(sys.executable)
+        return os.path.dirname(os.path.abspath(__file__))
     
-    def __init__(self, root):
-        """Создаёт и настраивает таймер, окошки и кнопки"""
-        self.root = root
-        self.root.title("Таймер помодоро")
-        self.root.geometry("500x600")
-        self.root.resizable(False, False)
+    SETTINGS_FILE = os.path.join(get_app_folder(), "settings.json")
+    STATS_FILE = os.path.join(get_app_folder(), "stats.json")
 
-        self.colors = {
+    
+    THEMES = {
+        "Классическая (тёмная)": {
             "bg": "#2c3e50",
             "fg": "#ecf0f1",
             "work": "#e74c3c",
@@ -33,32 +36,75 @@ class PomodoroTimer:
             "long_break": "#27ae60",
             "button": "#34495e",
             "button_hover": "#2990b9"
+        },
+        "Светлая тема": {
+            "bg": "#f5f5f5",
+            "fg": "#2c3e50",
+            "work": "#c0392b",
+            "short_break": "#2980b9",
+            "long_break": "#27ae60",
+            "button": "#bdc3c7",
+            "button_hover": "#95a5a6"
+        },
+        "Космос": {
+            "bg": "#1a1a2e",
+            "fg": "#e0e0e0",
+            "work": "#e94560",
+            "short_break": "#0f3460",
+            "long_break": "#533483",
+            "button": "#16213e",
+            "button_hover": "#0f3460"
+        },
+        "Морская": {
+            "bg": "#1e3c72",
+            "fg": "#f0f0f0",
+            "work": "#f8b400",
+            "short_break": "#2a9d8f",
+            "long_break": "#e76f51",
+            "button": "#2a5298",
+            "button_hover": "#1e3c72"
         }
+    }
+    
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Таймер помодоро")
+        self.root.geometry("500x600")
+        self.root.resizable(False, False)
+
+        self.colors = self.THEMES["Классическая (тёмная)"]
+        self.current_theme = "Классическая (тёмная)"
+
         self.root.configure(bg=self.colors["bg"])
 
         pygame.mixer.init()
         self.load_bell_sound()
+
+        self.load_settings
+
+        self.root.configure(bg=self.colors["bg"])
         
-        self.load_settings()
         self.work_time = self.WORK_MINUTES * 60
         self.short_break = self.SHORT_BREAK_MINUTES * 60
         self.long_break = self.LONG_BREAK_MINUTES * 60
         self.cycles = 0
-        self.max_cycles = self.CYCLES_BEFORE_LONG_BREAK 
+        self.max_cycles = self.CYCLES_BEFORE_LONG_BREAK
         self.is_running = False
         self.is_paused = False
         self.current_time = self.work_time
         self.current_phase = "work"
         self.timer_thread = None
-        self.today_pomodors = 0
-        self.total_pomodors = 0
+        self.next_second = 0
+
+        self.today_pomodoros = 0
+        self.total_pomodoros = 0
         self.last_date = datetime.now().strftime("%Y-%m-%d")
         self.load_stats()
-        
+
         self.create_widgets()
+        
     
     def load_settings(self):
-        """Загружает настройки из файла"""
         try:
             if os.path.exists(self.SETTINGS_FILE):
                 with open(self.SETTINGS_FILE, "r", encoding="utf-8") as f:
@@ -66,46 +112,57 @@ class PomodoroTimer:
                     self.WORK_MINUTES = settings.get("work_minutes", 25)
                     self.SHORT_BREAK_MINUTES = settings.get("short_break_minutes", 5)
                     self.LONG_BREAK_MINUTES = settings.get("long_break_minutes", 15)
+                    
+                    theme_name = settings.get("theme", "Классическая (тёмная)")
+                    if theme_name in self.THEMES:
+                        self.colors = self.THEMES[theme_name]
+                        self.current_theme = theme_name
+                    else:
+                        self.colors = self.THEMES["Классическая (тёмная)"]
+                        self.current_theme = "Классическая (тёмная)"
+                        
                     print("Настройки загружены")
         except Exception as e:
             print(f"Ошибка загрузки настроек: {e}")
+            self.colors = self.THEMES["Классическая (тёмная)"]
+            self.current_theme = "Классическая (тёмная)"
     
     def save_settings(self):
-        """Сохраняет настройки в файл"""
         try:
             settings = {
                 "work_minutes": self.WORK_MINUTES,
                 "short_break_minutes": self.SHORT_BREAK_MINUTES,
-                "long_break_minutes": self.LONG_BREAK_MINUTES
+                "long_break_minutes": self.LONG_BREAK_MINUTES,
+                "theme": self.current_theme
             }
             with open(self.SETTINGS_FILE, "w", encoding="utf-8") as f:
                 json.dump(settings, f, indent=4, ensure_ascii=False)
             print("Настройки сохранены")
         except Exception as e:
             print(f"Ошибка сохранения настроек: {e}")
+    
     def load_stats(self):
-        """Загружает статистику из файла"""
         try:
             if os.path.exists(self.STATS_FILE):
                 with open(self.STATS_FILE, "r", encoding="utf-8") as f:
                     stats = json.load(f)
-                    self.total_pomodors = stats.get("total_pomodoros", 0)
+                    self.total_pomodoros = stats.get("total_pomodoros", 0)
                     self.last_date = stats.get("last_date", datetime.now().strftime("%Y-%m-%d"))
-
-                    today = datetime.now().strftime("Y-%m-%d")
+                    
+                    today = datetime.now().strftime("%Y-%m-%d")
                     if today == self.last_date:
-                        self.today_pomodors = stats.get("today_pomodoros", 0)
+                        self.today_pomodoros = stats.get("today_pomodoros", 0)
                     else:
-                        self.today_pomodors = 0
+                        self.today_pomodoros = 0
                     print("Статистика загружена")
         except Exception as e:
             print(f"Ошибка загрузки статистики: {e}")
+
     def save_stats(self):
-        """Сохраняет статистику в файл"""
         try:
             stats = {
-                "today_pomodoros": self.today_pomodors,
-                "total_pomodoros": self.total_pomodors,
+                "today_pomodoros": self.today_pomodoros,
+                "total_pomodoros": self.total_pomodoros,
                 "last_date": self.last_date
             }
             with open(self.STATS_FILE, "w", encoding="utf-8") as f:
@@ -113,24 +170,25 @@ class PomodoroTimer:
             print("Статистика сохранена")
         except Exception as e:
             print(f"Ошибка сохранения статистики: {e}")
-    
+
     def update_stats(self):
-        """Обновляет статистику при завершении помидорки"""
-        self.today_pomodors += 1
-        self.total_pomodors += 1
+        self.today_pomodoros += 1
+        self.total_pomodoros += 1
         self.last_date = datetime.now().strftime("%Y-%m-%d")
         self.save_stats()
         self.update_stats_display()
     
-    def update_stats_display(self):
-        """Обновляет отображение статистики на экране"""
-        if hasattr(self, "stats_label"):
-            self.stats_label.config(
-                text=f"📊 Сегодня: {self.today_pomodors} | Всего: {self.total_pomodors}"
-            )
+    def apply_theme(self):
+        self.root.configure(bg=self.colors["bg"])
+        
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        
+        self.create_widgets()
+        self.update_display()
+        self.update_info_text()
     
     def load_bell_sound(self):
-        """Загрузка звука колокольчика из папки souds. Если же звука нет - то ничего страшного!"""
         try:
             if os.path.exists("sounds") and os.path.exists("sounds/bell.wav"):
                 self.bell_sound = pygame.mixer.Sound("sounds/bell.wav")
@@ -143,7 +201,6 @@ class PomodoroTimer:
             self.bell_sound = None
     
     def play_bell(self):
-        """Играет звонок, когда время вышло"""
         try:
             if self.bell_sound:
                 self.bell_sound.play()
@@ -153,8 +210,19 @@ class PomodoroTimer:
             print(f"Ошибка воспроизведения: {e}")
             print("\a")
     
+    def send_notification(self, title, message):
+        """Отправляет уведосление в Windows"""
+        try:
+            notification.notify(
+                title = title,
+                message=message,
+                app_name = "Помодоро Таймер",
+                timeout = 5
+            )
+        except Exception as e:
+            print(f"Ошибка уведомления: {e}")
+
     def create_widgets(self):
-        """Создаёт кнопки и надписи на самом экране"""
         title_frame = tk.Frame(self.root, bg=self.colors["bg"])
         title_frame.pack(pady=20)
         
@@ -207,21 +275,21 @@ class PomodoroTimer:
         )
         self.cycles_label.pack()
         
-        control_frame = tk.Frame(self.root, bg=self.colors["bg"])
-        control_frame.pack(pady=20)
-
         stats_frame = tk.Frame(self.root, bg=self.colors["bg"])
         stats_frame.pack(pady=5)
 
         self.stats_label = tk.Label(
             stats_frame,
-            text=f"📊 Сегодня: {self.today_pomodors} | Всего: {self.total_pomodors}",
+            text=f"📊 Сегодня: {self.today_pomodoros} | Всего: {self.total_pomodoros}",
             font=("Arial", 10),
             bg=self.colors["bg"],
             fg=self.colors["fg"]
         )
         self.stats_label.pack()
-
+        
+        control_frame = tk.Frame(self.root, bg=self.colors["bg"])
+        control_frame.pack(pady=20)
+        
         self.start_button = self.create_button(
             control_frame,
             "▶️ Старт",
@@ -258,8 +326,7 @@ class PomodoroTimer:
         info_frame = tk.Frame(self.root, bg=self.colors["bg"])
         info_frame.pack(side="bottom", pady=20)
         
-        info_text = """25 минут работа → 5 минут отдыха
-4 цикла → 15 минут большой перерыв"""
+        info_text = f"{self.WORK_MINUTES} минут работа → {self.SHORT_BREAK_MINUTES} минут отдыха\n{self.CYCLES_BEFORE_LONG_BREAK} цикла → {self.LONG_BREAK_MINUTES} минут большой перерыв"
         
         info_label = tk.Label(
             info_frame,
@@ -272,7 +339,6 @@ class PomodoroTimer:
         info_label.pack()
     
     def create_button(self, parent, text, command, hover_color):
-        """Делает одну красивенькую кнопку"""
         button = tk.Button(
             parent,
             text=text,
@@ -300,9 +366,8 @@ class PomodoroTimer:
         return button
     
     def update_display(self):
-        """Показывает сколько времени осталось"""
-        minutes = self.current_time // 60
-        seconds = self.current_time % 60
+        minutes = int(self.current_time // 60)
+        seconds = int(self.current_time % 60)
         self.timer_label.config(text=f"{minutes:02d}:{seconds:02d}")
         
         if self.current_phase == "work":
@@ -316,12 +381,26 @@ class PomodoroTimer:
             progress_value = ((total - self.current_time) / total) * 100
             self.progress["value"] = progress_value
     
+    def update_stats_display(self):
+        if hasattr(self, 'stats_label'):
+            self.stats_label.config(
+                text=f"📊 Сегодня: {self.today_pomodoros} | Всего: {self.total_pomodoros}"
+            )
+    
+    def update_info_text(self):
+        """Обновляет информационный текст внизу экрана"""
+        for widget in self.root.winfo_children():
+            if isinstance(widget, tk.Frame):
+                for child in widget.winfo_children():
+                    if isinstance(child, tk.Label) and "минут работа" in child.cget("text"):
+                        child.config(text=f"{self.WORK_MINUTES} минут работы > {self.SHORT_BREAK_MINUTES} минут отдыха\n{self.CYCLES_BEFORE_LONG_BREAK} цикла > {self.LONG_BREAK_MINUTES} минут большой перерыв")
+                        return
+    
     def switch_phase(self):
-        """Переключение между работой и отдыхом"""
         if self.current_phase == "work":
             self.cycles += 1
             self.cycles_label.config(text=f"Циклов завершено: {self.cycles}")
-
+            
             self.update_stats()
             
             if self.cycles % self.max_cycles == 0:
@@ -331,6 +410,7 @@ class PomodoroTimer:
                     text="Большой перерыв!",
                     fg=self.colors["long_break"]
                 )
+                self.send_notification("🍅 Помодоро", "Время большого перерыва! 15 минут отдыха")
             else:
                 self.current_phase = "short_break"
                 self.current_time = self.short_break
@@ -338,6 +418,7 @@ class PomodoroTimer:
                     text="Короткий отдых",
                     fg=self.colors["short_break"]
                 )
+                self.send_notification("🍅 Помодоро", f"Короткий перерыв! {self.SHORT_BREAK_MINUTES} минут отдыха")
         else: 
             self.current_phase = "work"
             self.current_time = self.work_time
@@ -345,6 +426,8 @@ class PomodoroTimer:
                 text="Время работать!",
                 fg=self.colors["work"]
             )
+            self.send_notification("🍅 Помодоро", f"Отдых закончен! {self.WORK_MINUTES} минут работы")
+
         
         self.play_bell()
         self.update_display()
@@ -353,19 +436,23 @@ class PomodoroTimer:
         self.start_timer()  
     
     def timer_function(self):
-        """Считает секунды внутри таймера"""
+        self.next_second = time.time() + 1
         while self.is_running and self.current_time > 0:
             if not self.is_paused:
-                time.sleep(1)
-                self.current_time -= 1
-                self.root.after(0, self.update_display)
-        
-        if self.is_running and self.current_time == 0:
-            self.is_running = False  
+                now = time.time()
+                if now >= self.next_second:
+                    self.current_time -= 1
+                    self.root.after(0, self.update_display)
+                    self.next_second += 1
+                time.sleep(0.05)
+            else:
+                time.sleep(0.1)
+                self.next_second = time.time() + 1
+        if self.is_running and self.current_time <= 0:
+            self.is_running = False
             self.root.after(0, self.switch_phase)
-    
+         
     def start_timer(self):
-        """Запускает таймер/отсчёт времени"""
         if not self.is_running:
             self.is_running = True
             self.is_paused = False
@@ -375,7 +462,6 @@ class PomodoroTimer:
             self.timer_thread.start()
     
     def pause_timer(self):
-        """Ставит или снимает таймер с паузы"""
         if self.is_running:
             if not self.is_paused:
                 self.is_paused = True
@@ -385,7 +471,6 @@ class PomodoroTimer:
                 self.pause_button.config(text="⏸️ Пауза")
     
     def reset_timer(self):
-        """Сбрасывает время"""
         self.is_running = False
         self.is_paused = False
         self.current_time = self.work_time
@@ -401,15 +486,24 @@ class PomodoroTimer:
         self.progress["value"] = 0
     
     def open_settings_window(self):
-        """Открывает окно настроек"""
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Настройки таймера")
-        settings_window.geometry("300x250")
+        settings_window.geometry("400x400")
         settings_window.configure(bg=self.colors["bg"])
         settings_window.resizable(False, False)
 
+        tab_control = ttk.Notebook(settings_window)
+        
+        time_tab = tk.Frame(tab_control, bg=self.colors["bg"])
+        tab_control.add(time_tab, text="Время")
+        
+        color_tab = tk.Frame(tab_control, bg=self.colors["bg"])
+        tab_control.add(color_tab, text="Оформление")
+        
+        tab_control.pack(expand=1, fill="both", padx=10, pady=10)
+
         title_label = tk.Label(
-            settings_window,
+            time_tab,
             text="Настройки времени",
             font=("Arial", 14, "bold"),
             bg=self.colors["bg"],
@@ -417,7 +511,7 @@ class PomodoroTimer:
         )
         title_label.pack(pady=15)
 
-        settings_frame = tk.Frame(settings_window, bg=self.colors["bg"])
+        settings_frame = tk.Frame(time_tab, bg=self.colors["bg"])
         settings_frame.pack(pady=10)
 
         work_label = tk.Label(
@@ -440,7 +534,7 @@ class PomodoroTimer:
 
         short_label = tk.Label(
             settings_frame,
-            text="Короткий отдых: ",
+            text="Короткий отдых:",
             bg=self.colors["bg"],
             fg=self.colors["fg"],
             font=("Arial", 10)
@@ -464,7 +558,7 @@ class PomodoroTimer:
             font=("Arial", 10)
         )
         long_label.grid(row=2, column=0, padx=10, pady=5, sticky="w")
-    
+
         long_var = tk.IntVar(value=self.LONG_BREAK_MINUTES)
         long_entry = tk.Entry(
             settings_frame,
@@ -473,19 +567,68 @@ class PomodoroTimer:
             font=("Arial", 10)
         )
         long_entry.grid(row=2, column=1, padx=10, pady=5)
-    
-        # Кнопки
+
+        theme_label = tk.Label(
+            color_tab,
+            text="Выберите тему оформления",
+            font=("Arial", 14, "bold"),
+            bg=self.colors["bg"],
+            fg=self.colors["fg"]
+        )
+        theme_label.pack(pady=15)
+
+        theme_frame = tk.Frame(color_tab, bg=self.colors["bg"])
+        theme_frame.pack(pady=10)
+
+        theme_var = tk.StringVar(value=self.current_theme)
+        
+        row = 0
+        col = 0
+        for theme_name in self.THEMES.keys():
+            theme_btn = tk.Radiobutton(
+                theme_frame,
+                text=theme_name,
+                variable=theme_var,
+                value=theme_name,
+                bg=self.colors["bg"],
+                fg=self.colors["fg"],
+                selectcolor=self.colors["bg"],
+                font=("Arial", 10)
+            )
+            theme_btn.grid(row=row, column=col, padx=20, pady=5, sticky="w")
+            
+            colors_preview = tk.Frame(theme_frame, bg=self.THEMES[theme_name]["bg"], width=30, height=20)
+            colors_preview.grid(row=row, column=col+1, padx=5, pady=5)
+            
+            col += 2
+            if col > 3:
+                col = 0
+                row += 1
+
         button_frame = tk.Frame(settings_window, bg=self.colors["bg"])
         button_frame.pack(pady=20)
         
         def save_and_close():
-            """Сохраняет настройки и закрывает окно"""
             if work_var.get() > 0 and short_var.get() > 0 and long_var.get() > 0:
                 self.WORK_MINUTES = work_var.get()
                 self.SHORT_BREAK_MINUTES = short_var.get()
                 self.LONG_BREAK_MINUTES = long_var.get()
+
+                self.work_time = self.WORK_MINUTES * 60
+                self.short_break = self.SHORT_BREAK_MINUTES * 60
+                self.long_break = self.LONG_BREAK_MINUTES * 60
+
+                if not self.is_running:
+                    self.current_time = self.work_time
+                
+                selected_theme = theme_var.get()
+                if selected_theme in self.THEMES:
+                    self.current_theme = selected_theme
+                    self.colors = self.THEMES[selected_theme]
+                
                 self.save_settings()
-                self.reset_timer()
+                self.apply_theme()
+                self.update_info_text()
                 
                 settings_window.destroy()
             else:
@@ -514,7 +657,6 @@ class PomodoroTimer:
         cancel_button.pack(side="left", padx=10)
 
 def main():
-    """Запуск программы"""
     root = tk.Tk()
     app = PomodoroTimer(root)
     root.mainloop()
