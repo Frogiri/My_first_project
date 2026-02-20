@@ -62,6 +62,96 @@ class PomodoroTimer:
             "long_break": "#e76f51",
             "button": "#2a5298",
             "button_hover": "#1e3c72"
+        },
+        "Лавандовая": {
+            "bg": "#967aa1",
+            "fg": "#ffffff",
+            "work": "#6b4e71",
+            "short_break": "#aa7b9e",
+            "long_break": "#b39bc8",
+            "button": "#7a5b7d",
+            "button_hover": "#8b6b8e"
+        },
+        "Мятная": {
+            "bg": "#98c1d9",
+            "fg": "#1e2f4a",
+            "work": "#ee6c4d",
+            "short_break": "#3d5a80",
+            "long_break": "#2b4f5c",
+            "button": "#4f7a8c",
+            "button_hover": "#5f8a9c"
+        },
+        "Закат": {
+            "bg": "#2d1b3c",
+            "fg": "#f6e9e9",
+            "work": "#ff6f61",
+            "short_break": "#d4a5a5",
+            "long_break": "#b76e79",
+            "button": "#3d2645",
+            "button_hover": "#4d3655"
+        },
+        "Лесная": {
+            "bg": "#1e3c2f",
+            "fg": "#e0e7d9",
+            "work": "#c44536",
+            "short_break": "#558b6e",
+            "long_break": "#6b4f47",
+            "button": "#2d5a3a",
+            "button_hover": "#3d6a4a"
+        },
+        "Ночной океан": {
+            "bg": "#0a2342",
+            "fg": "#b9d8f2",
+            "work": "#ffb347",
+            "short_break": "#2a628f",
+            "long_break": "#18435c",
+            "button": "#153b5a",
+            "button_hover": "#254b6a"
+        },
+        "Розовый закат": {
+            "bg": "#ff9a9e",
+            "fg": "#2c3e50",
+            "work": "#fad0c4",
+            "short_break": "#fbc2eb",
+            "long_break": "#a18cd1",
+            "button": "#fbc2eb",
+            "button_hover": "#fad0c4"
+        },
+        "Киберпанк": {
+            "bg": "#0d0221",
+            "fg": "#0ff0fc",
+            "work": "#f706cf",
+            "short_break": "#6b0f9c",
+            "long_break": "#b30fc7",
+            "button": "#240b36",
+            "button_hover": "#6b0f9c"
+        },
+        "Кофейня": {
+            "bg": "#3e2723",
+            "fg": "#d7ccc8",
+            "work": "#ff6f4a",
+            "short_break": "#8d6e63",
+            "long_break": "#a1887f",
+            "button": "#5d4037",
+            "button_hover": "#8d6e63"
+        },
+        "Неон": {
+            "bg": "#000000",
+            "fg": "#ffffff",
+            "work": "#39ff14",
+            "short_break": "#ff073a",
+            "long_break": "#0ff0fc",
+            "button": "#111111",
+            "button_hover": "#39ff14"
+        },
+        "Пастель": {
+            "bg": "#f8edd9",
+            "fg": "#5e5b70",
+            "work": "#ffb6b9",
+            "short_break": "#bbe4e9",
+            "long_break": "#c6d8b9",
+            "button": "#e3d8c5",
+            "button_hover": "#ffb6b9"
         }
     }
     
@@ -79,7 +169,7 @@ class PomodoroTimer:
         pygame.mixer.init()
         self.load_bell_sound()
 
-        self.load_settings
+        self.load_settings()
 
         self.root.configure(bg=self.colors["bg"])
         
@@ -94,6 +184,7 @@ class PomodoroTimer:
         self.current_phase = "work"
         self.timer_thread = None
         self.next_second = 0
+        self.volume = 70
 
         self.today_pomodoros = 0
         self.total_pomodoros = 0
@@ -112,6 +203,7 @@ class PomodoroTimer:
                     self.WORK_MINUTES = settings.get("work_minutes", 25)
                     self.SHORT_BREAK_MINUTES = settings.get("short_break_minutes", 5)
                     self.LONG_BREAK_MINUTES = settings.get("long_break_minutes", 15)
+                    self.volume = settings.get("volume", 70)
                     
                     theme_name = settings.get("theme", "Классическая (тёмная)")
                     if theme_name in self.THEMES:
@@ -133,7 +225,8 @@ class PomodoroTimer:
                 "work_minutes": self.WORK_MINUTES,
                 "short_break_minutes": self.SHORT_BREAK_MINUTES,
                 "long_break_minutes": self.LONG_BREAK_MINUTES,
-                "theme": self.current_theme
+                "theme": self.current_theme,
+                "volume": self.volume
             }
             with open(self.SETTINGS_FILE, "w", encoding="utf-8") as f:
                 json.dump(settings, f, indent=4, ensure_ascii=False)
@@ -193,7 +286,9 @@ class PomodoroTimer:
         try:
             if os.path.exists("sounds") and os.path.exists("sounds/bell.wav"):
                 self.bell_sound = pygame.mixer.Sound("sounds/bell.wav")
-                print("Звук колокольчика загружен")
+                if hasattr(self, "volume"):
+                    self.bell_sound.set_volume(self.volume / 100)
+                print(f"Звук колокольчика загружен, громкость: {self.volume}%")
             else:
                 self.bell_sound = None
                 print("Звук колокольчика не найден, будет системный звук")
@@ -334,6 +429,7 @@ class PomodoroTimer:
             justify="center"
         )
         info_label.pack()
+        self.info_label = info_label
     
     def create_button(self, parent, text, command, hover_color):
         button = tk.Button(
@@ -386,14 +482,10 @@ class PomodoroTimer:
     
     def update_info_text(self):
         """Обновляет информационный текст внизу экрана"""
-        for widget in self.root.winfo_children():
-            if isinstance(widget, tk.Frame):
-                for child in widget.winfo_children():
-                    if isinstance(child, tk.Label) and "минут работа" in child.cget("text"):
-
-
-                        child.config(text=f"{self.WORK_MINUTES} минут работы > {self.SHORT_BREAK_MINUTES} минут отдыха\n{self.CYCLES_BEFORE_LONG_BREAK} цикла > {self.LONG_BREAK_MINUTES} минут большой перерыв")
-                        return
+        if hasattr(self, 'info_label'):
+            self.info_label.config(
+                text=f"{self.WORK_MINUTES} минут работа → {self.SHORT_BREAK_MINUTES} минут отдыха\n{self.CYCLES_BEFORE_LONG_BREAK} цикла → {self.LONG_BREAK_MINUTES} минут большой перерыв"
+            )
     
     def switch_phase(self):
         if self.current_phase == "work":
@@ -487,7 +579,7 @@ class PomodoroTimer:
     def open_settings_window(self):
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Настройки таймера")
-        settings_window.geometry("400x400")
+        settings_window.geometry("450x500")
         settings_window.configure(bg=self.colors["bg"])
         settings_window.resizable(False, False)
 
@@ -500,8 +592,12 @@ class PomodoroTimer:
         color_tab = tk.Frame(tab_control, bg=self.colors["bg"])
         tab_control.add(color_tab, text="Оформление")
         
+        sound_tab = tk.Frame(tab_control, bg=self.colors["bg"])
+        tab_control.add(sound_tab, text="Звук")
+        
         tab_control.pack(expand=1, fill="both", padx=10, pady=10)
 
+        
         title_label = tk.Label(
             time_tab,
             text="Настройки времени",
@@ -568,6 +664,7 @@ class PomodoroTimer:
         )
         long_entry.grid(row=2, column=1, padx=10, pady=5)
 
+        
         theme_label = tk.Label(
             color_tab,
             text="Выберите тему оформления",
@@ -577,8 +674,20 @@ class PomodoroTimer:
         )
         theme_label.pack(pady=15)
 
-        theme_frame = tk.Frame(color_tab, bg=self.colors["bg"])
-        theme_frame.pack(pady=10)
+        # Создаём прокрутку
+        canvas = tk.Canvas(color_tab, bg=self.colors["bg"], highlightthickness=0)
+        scrollbar = tk.Scrollbar(color_tab, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg=self.colors["bg"])
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        theme_frame = scrollable_frame
 
         theme_var = tk.StringVar(value=self.current_theme)
         
@@ -605,6 +714,55 @@ class PomodoroTimer:
                 col = 0
                 row += 1
 
+        canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        scrollbar.pack(side="right", fill="y")
+
+        
+        sound_label = tk.Label(
+            sound_tab,
+            text="Настройки звука",
+            font=("Arial", 14, "bold"),
+            bg=self.colors["bg"],
+            fg=self.colors["fg"]
+        )
+        sound_label.pack(pady=15)
+
+        sound_frame = tk.Frame(sound_tab, bg=self.colors["bg"])
+        sound_frame.pack(pady=20)
+
+        volume_text = tk.Label(
+            sound_frame,
+            text="Громкость звука:",
+            bg=self.colors["bg"],
+            fg=self.colors["fg"],
+            font=("Arial", 11)
+        )
+        volume_text.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+
+        volume_var = tk.IntVar(value=self.volume)
+        volume_value = tk.Label(
+            sound_frame,
+            text=f"{self.volume}%",
+            bg=self.colors["bg"],
+            fg=self.colors["fg"],
+            font=("Arial", 11, "bold")
+        )
+        volume_value.grid(row=0, column=1, padx=10, pady=10)
+
+        volume_scale = tk.Scale(
+            sound_frame,
+            from_=0,
+            to=100,
+            orient="horizontal",
+            variable=volume_var,
+            bg=self.colors["bg"],
+            fg=self.colors["fg"],
+            length=200,
+            command=lambda v: volume_value.config(text=f"{int(float(v))}%")
+        )
+        volume_scale.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
+
+
         button_frame = tk.Frame(settings_window, bg=self.colors["bg"])
         button_frame.pack(pady=20)
         
@@ -626,6 +784,10 @@ class PomodoroTimer:
                 if selected_theme in self.THEMES:
                     self.current_theme = selected_theme
                     self.colors = self.THEMES[selected_theme]
+                
+                self.volume = volume_var.get()
+                if self.bell_sound:
+                    self.bell_sound.set_volume(self.volume / 100)
                 
                 self.save_settings()
                 self.apply_theme()
