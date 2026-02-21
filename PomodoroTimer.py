@@ -46,7 +46,7 @@ class PomodoroTimer:
         "Светлая тема": {
             "bg": "#f5f5f5",
             "fg": "#2c3e50",
-            "work": "#c0392b",
+            "work": "#e74c3c",
             "short_break": "#2980b9",
             "long_break": "#27ae60",
             "button": "#bdc3c7",
@@ -73,11 +73,12 @@ class PomodoroTimer:
         "Лавандовая": {
             "bg": "#967aa1",
             "fg": "#ffffff",
-            "work": "#6b4e71",
+            "work": "#c47ac0",
             "short_break": "#aa7b9e",
             "long_break": "#b39bc8",
-            "button": "#7a5b7d",
-            "button_hover": "#8b6b8e"
+            "button": "#5d3e5f",
+            "button_hover": "#b19ab3",
+            "button_pause": "#8a6e8c"
         },
         "Мятная": {
             "bg": "#98c1d9",
@@ -85,8 +86,9 @@ class PomodoroTimer:
             "work": "#ee6c4d",
             "short_break": "#3d5a80",
             "long_break": "#2b4f5c",
-            "button": "#4f7a8c",
-            "button_hover": "#5f8a9c"
+            "button": "#2c4f5e",
+            "button_hover": "#5f8a9c",
+            "button_pause": "#4a6f7e"
         },
         "Закат": {
             "bg": "#2d1b3c",
@@ -118,11 +120,13 @@ class PomodoroTimer:
         "Розовый закат": {
             "bg": "#ff9a9e",
             "fg": "#2c3e50",
-            "work": "#fad0c4",
-            "short_break": "#fbc2eb",
+            "work": "#ff6f61",
+            "short_break": "#4a90e2",
             "long_break": "#a18cd1",
-            "button": "#fbc2eb",
-            "button_hover": "#fad0c4"
+            "button": "#4a90e2",
+            "button_hover": "#6aa9ff",
+            "button_pause": "#4a90e2",
+            "button_reset": "#4a90e2"
         },
         "Киберпанк": {
             "bg": "#0d0221",
@@ -149,12 +153,14 @@ class PomodoroTimer:
             "short_break": "#ff073a",
             "long_break": "#0ff0fc",
             "button": "#111111",
-            "button_hover": "#39ff14"
+            "button_hover": "#39ff14",
+            "button_pause": "#39ff14",
+            "button_reset": "#39ff14"
         },
         "Пастель": {
             "bg": "#f8edd9",
             "fg": "#5e5b70",
-            "work": "#ffb6b9",
+            "work": "#ff8a8c",
             "short_break": "#bbe4e9",
             "long_break": "#c6d8b9",
             "button": "#e3d8c5",
@@ -190,7 +196,7 @@ class PomodoroTimer:
         "Мятный коктейль": {
             "bg": "#b8e0d4",
             "fg": "#1a4d3e",
-            "work": "#ff6b6b",
+            "work": "#ff4f4f",
             "short_break": "#4ecdc4",
             "long_break": "#ffe66d",
             "button": "#98d9c9",
@@ -203,7 +209,8 @@ class PomodoroTimer:
             "short_break": "#4ecdc4",
             "long_break": "#ffe66d",
             "button": "#4a569d",
-            "button_hover": "#6a76bd"
+            "button_hover": "#6a76bd",
+            "button_outline": "#ffffff"
         },
         "Пурпурный закат": {
             "bg": "#6a4c93",
@@ -231,13 +238,58 @@ class PomodoroTimer:
             "long_break": "#e6a2c0",
             "button": "#873e6b",
             "button_hover": "#b45f93"
+        },
+        "Полуночный синий": {
+            "bg": "#191970",
+            "fg": "#f0f8ff",
+            "work": "#ff6347",
+            "short_break": "#4682b4",
+            "long_break": "#32cd32",
+            "button": "#2a2a8a",
+            "button_hover": "#3a3aaa"
+        },
+        "Золотая осень": {
+            "bg": "#8b4513",
+            "fg": "#ffdead",
+            "work": "#ff8c00",
+            "short_break": "#d2691e",
+            "long_break": "#daa520",
+            "button": "#a0522d",
+            "button_hover": "#cd853f"
+        },
+        "Мятная свежесть": {
+            "bg": "#98fb98",
+            "fg": "#2f4f4f",
+            "work": "#ff4500",
+            "short_break": "#20b2aa",
+            "long_break": "#2e8b57",
+            "button": "#90ee90",
+            "button_hover": "#c0ffc0"
+        },
+        "Тёмная вишня": {
+            "bg": "#4b0082",
+            "fg": "#ffb6c1",
+            "work": "#ff1493",
+            "short_break": "#9400d3",
+            "long_break": "#ba55d3",
+            "button": "#36005e",
+            "button_hover": "#56007e"
+        },
+        "Пустынный закат": {
+            "bg": "#cd853f",
+            "fg": "#fdf5e6",
+            "work": "#dc143c",
+            "short_break": "#b8860b",
+            "long_break": "#d2691e",
+            "button": "#b45f3a",
+            "button_hover": "#d47a5a"
         }
     }
     
     def __init__(self, root):
         self.root = root
         self.root.title("Таймер помодоро")
-        self.root.geometry("500x650")
+        self.root.geometry("500x700")
         self.root.resizable(False, False)
 
         self.colors = self.THEMES["Классическая (тёмная)"]
@@ -276,7 +328,6 @@ class PomodoroTimer:
         self.today_pomodoros = 0
         self.total_pomodoros = 0
         self.last_date = datetime.now().strftime("%Y-%m-%d")
-        self.load_stats()
         
         self.achievements = {
             "first_pomodoro": {"name": "🍅 Первый помидор", "desc": "Завершите первый цикл работы", "unlocked": False},
@@ -286,9 +337,10 @@ class PomodoroTimer:
             "workaholic": {"name": "💪 Трудоголик", "desc": "20 помидорок за день", "unlocked": False, "progress": 0, "target": 20},
             "night_owl": {"name": "🦉 Полуночник", "desc": "Помидорка после полуночи", "unlocked": False},
             "master_focus": {"name": "🧘 Мастер фокуса", "desc": "10 раз подряд без сброса", "unlocked": False, "progress": 0, "target": 10},
-            "colorful": {"name": "🌈 Разноцветный", "desc": "Использовать все темы", "unlocked": False, "progress": 0, "target": 20}
+            "colorful": {"name": "🌈 Разноцветный", "desc": "Использовать все темы", "unlocked": False, "progress": 0, "target": 25}
         }
 
+        self.load_stats()
         self.create_widgets()
         self.start_animations()
     
@@ -472,7 +524,7 @@ class PomodoroTimer:
         
         used_themes = len(set([self.current_theme]))
         self.achievements["colorful"]["progress"] = used_themes
-        if used_themes >= 20:
+        if used_themes >= 25:
             self.achievements["colorful"]["unlocked"] = True
             self.show_achievement_notification("🌈 Разноцветный")
 
@@ -491,6 +543,12 @@ class PomodoroTimer:
             if ach["unlocked"]:
                 count += 1
         return count
+    
+    def get_brightness(self, hex_color):
+        r = int(hex_color[1:3], 16)
+        g = int(hex_color[3:5], 16)
+        b = int(hex_color[5:7], 16)
+        return (r * 0.299 + g * 0.587 + b * 0.114)
     
     def apply_theme(self):
         self.root.configure(bg=self.colors["bg"])
@@ -618,24 +676,37 @@ class PomodoroTimer:
         )
         self.cycles_label.pack()
         
+        # Статистика с правильным выравниванием
         stats_frame = tk.Frame(self.root, bg=self.colors["bg"])
-        stats_frame.pack(pady=5)
+        stats_frame.pack(pady=2)
 
-        self.stats_label = tk.Label(
-            stats_frame,
-            text=f"📊 Сегодня: {self.today_pomodoros} | Всего: {self.total_pomodoros}",
+        stats_inner = tk.Frame(stats_frame, bg=self.colors["bg"])
+        stats_inner.pack()
+
+        emoji_label = tk.Label(
+            stats_inner,
+            text="📊",
+            font=("Arial", 11),
+            bg=self.colors["bg"],
+            fg=self.colors["fg"]
+        )
+        emoji_label.pack(side="left", padx=(0, 2))
+
+        self.stats_text_label = tk.Label(
+            stats_inner,
+            text=f"Сегодня: {self.today_pomodoros} | Всего: {self.total_pomodoros}",
             font=("Arial", 10),
             bg=self.colors["bg"],
             fg=self.colors["fg"]
         )
-        self.stats_label.pack()
+        self.stats_text_label.pack(side="left")
         
         control_frame = tk.Frame(self.root, bg=self.colors["bg"])
         control_frame.pack(pady=20)
         
         self.start_button = self.create_button(
             control_frame,
-            "▶️ Старт",
+            "▶️Старт",
             self.start_timer,
             self.colors["button_hover"]
         )
@@ -643,7 +714,7 @@ class PomodoroTimer:
         
         self.pause_button = self.create_button(
             control_frame,
-            "⏸️ Пауза",
+            "⏸️Пауза",
             self.pause_timer,
             self.colors["button"]
         )
@@ -652,7 +723,7 @@ class PomodoroTimer:
         
         self.reset_button = self.create_button(
             control_frame,
-            "↺ Сброс",
+            "↺Сброс",
             self.reset_timer,
             self.colors["button"]
         )
@@ -660,19 +731,22 @@ class PomodoroTimer:
         
         self.settings_button = self.create_button(
             control_frame,
-            "⚙️ Настройки",
+            "⚙️Настройки",
             self.open_settings_window,
             self.colors["button_hover"]
         )
         self.settings_button.pack(side="left", padx=5)
         
+        achievements_frame = tk.Frame(self.root, bg=self.colors["bg"])
+        achievements_frame.pack(pady=10)
+        
         self.achievements_button = self.create_button(
-            control_frame,
+            achievements_frame,
             "🏆 Достижения",
             self.open_achievements_window,
             self.colors["button_hover"]
         )
-        self.achievements_button.pack(side="left", padx=5)
+        self.achievements_button.pack()
         
         info_frame = tk.Frame(self.root, bg=self.colors["bg"])
         info_frame.pack(side="bottom", pady=20)
@@ -691,11 +765,20 @@ class PomodoroTimer:
         self.info_label = info_label
     
     def create_button(self, parent, text, command, hover_color):
+        outline_color = self.colors.get("button_outline", self.colors["fg"])
+        
+        if "Пауза" in text:
+            button_color = self.colors.get("button_pause", self.colors["button"])
+        elif "Сброс" in text:
+            button_color = self.colors.get("button_reset", self.colors["button"])
+        else:
+            button_color = self.colors["button"]
+        
         button = tk.Button(
             parent,
             text=text,
             font=("Arial", 11),
-            bg=self.colors["button"],
+            bg=button_color,
             fg=self.colors["fg"],
             activebackground=hover_color,
             activeforeground=self.colors["fg"],
@@ -703,7 +786,9 @@ class PomodoroTimer:
             padx=15,
             pady=8,
             cursor="hand2",
-            command=command
+            command=command,
+            highlightbackground=outline_color,
+            highlightthickness=1 if "button_outline" in self.colors else 0
         )
         
         def on_enter(e):
@@ -711,7 +796,12 @@ class PomodoroTimer:
             button.config(font=("Arial", 12, "bold"))
         
         def on_leave(e):
-            button["background"] = self.colors["button"]
+            if "Пауза" in text:
+                button["background"] = self.colors.get("button_pause", self.colors["button"])
+            elif "Сброс" in text:
+                button["background"] = self.colors.get("button_reset", self.colors["button"])
+            else:
+                button["background"] = self.colors["button"]
             button.config(font=("Arial", 11))
         
         button.bind("<Enter>", on_enter)
@@ -736,9 +826,9 @@ class PomodoroTimer:
             self.progress["value"] = progress_value
     
     def update_stats_display(self):
-        if hasattr(self, 'stats_label'):
-            self.stats_label.config(
-                text=f"📊 Сегодня: {self.today_pomodoros} | Всего: {self.total_pomodoros}"
+        if hasattr(self, 'stats_text_label'):
+            self.stats_text_label.config(
+                text=f"Сегодня: {self.today_pomodoros} | Всего: {self.total_pomodoros}"
             )
     
     def update_info_text(self):
@@ -815,11 +905,11 @@ class PomodoroTimer:
         if self.is_running:
             if not self.is_paused:
                 self.is_paused = True
-                self.pause_button.config(text="▶️ Продолжить")
+                self.pause_button.config(text="▶️Продолжить")
                 self.no_pause_streak = 0
             else:
                 self.is_paused = False
-                self.pause_button.config(text="⏸️ Пауза")
+                self.pause_button.config(text="⏸️Пауза")
     
     def reset_timer(self):
         self.is_running = False
@@ -832,7 +922,7 @@ class PomodoroTimer:
         self.no_reset_streak = 0
         
         self.start_button.config(state="normal")
-        self.pause_button.config(state="disabled", text="⏸️ Пауза")
+        self.pause_button.config(state="disabled", text="⏸️Пауза")
         
         self.update_display()
         self.progress["value"] = 0
@@ -840,34 +930,37 @@ class PomodoroTimer:
     def open_achievements_window(self):
         ach_window = tk.Toplevel(self.root)
         ach_window.title("Достижения")
-        ach_window.geometry("400x500")
+        ach_window.geometry("450x550")
         ach_window.configure(bg=self.colors["bg"])
         ach_window.resizable(False, False)
 
         title_label = tk.Label(
             ach_window,
             text="🏆 Ваши достижения",
-            font=("Arial", 16, "bold"),
+            font=("Arial", 18, "bold"),
             bg=self.colors["bg"],
             fg=self.colors["fg"]
         )
         title_label.pack(pady=15)
 
-        stats_text = f"Всего помидорок: {self.total_pomodoros}\n"
-        stats_text += f"Разблокировано: {self.count_unlocked_achievements()}/{len(self.achievements)}"
+        stats_text = f"🍅 Всего помидорок: {self.total_pomodoros}\n"
+        stats_text += f"🏆 Разблокировано: {self.count_unlocked_achievements()}/{len(self.achievements)}"
         
         stats_label = tk.Label(
             ach_window,
             text=stats_text,
-            font=("Arial", 11),
+            font=("Arial", 12),
             bg=self.colors["bg"],
             fg=self.colors["fg"],
             justify="center"
         )
         stats_label.pack(pady=10)
 
-        canvas = tk.Canvas(ach_window, bg=self.colors["bg"], highlightthickness=0)
-        scrollbar = tk.Scrollbar(ach_window, orient="vertical", command=canvas.yview)
+        main_frame = tk.Frame(ach_window, bg=self.colors["bg"])
+        main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        canvas = tk.Canvas(main_frame, bg=self.colors["bg"], highlightthickness=0)
+        scrollbar = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg=self.colors["bg"])
 
         scrollable_frame.bind(
@@ -875,35 +968,40 @@ class PomodoroTimer:
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
 
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        canvas.bind("<MouseWheel>", _on_mousewheel)
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
 
         for ach_id, ach_data in self.achievements.items():
-            ach_frame = tk.Frame(scrollable_frame, bg=self.colors["bg"], relief="ridge", bd=1)
+            ach_frame = tk.Frame(scrollable_frame, bg=self.colors["bg"], relief="ridge", bd=2)
             ach_frame.pack(fill="x", padx=10, pady=5)
 
             title_frame = tk.Frame(ach_frame, bg=self.colors["bg"])
-            title_frame.pack(fill="x", padx=5, pady=2)
+            title_frame.pack(fill="x", padx=5, pady=5)
 
             status = "✅" if ach_data["unlocked"] else "⏳"
             name_label = tk.Label(
                 title_frame,
-                text=f"{status} {ach_data['name']}",
-                font=("Arial", 11, "bold"),
+                text=f"{status}  {ach_data['name']}",
+                font=("Arial", 12, "bold"),
                 bg=self.colors["bg"],
                 fg=self.colors["fg"],
                 anchor="w"
             )
-            name_label.pack(side="left")
+            name_label.pack(anchor="w")
 
             desc_label = tk.Label(
                 ach_frame,
                 text=ach_data["desc"],
-                font=("Arial", 9),
+                font=("Arial", 10),
                 bg=self.colors["bg"],
                 fg="#95a5a6",
                 anchor="w",
-                justify="left"
+                justify="left",
+                wraplength=350
             )
             desc_label.pack(fill="x", padx=5, pady=2)
 
@@ -915,7 +1013,7 @@ class PomodoroTimer:
                 progress_label = tk.Label(
                     progress_frame,
                     text=progress_text,
-                    font=("Arial", 8),
+                    font=("Arial", 9),
                     bg=self.colors["bg"],
                     fg=self.colors["fg"]
                 )
@@ -923,13 +1021,13 @@ class PomodoroTimer:
 
                 progress_bar = ttk.Progressbar(
                     progress_frame,
-                    length=200,
+                    length=300,
                     mode="determinate",
                     value=(ach_data['progress'] / ach_data['target']) * 100
                 )
                 progress_bar.pack(side="left", fill="x", expand=True)
 
-        canvas.pack(side="left", fill="both", expand=True, padx=10)
+        canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
         close_button = tk.Button(
@@ -938,8 +1036,13 @@ class PomodoroTimer:
             command=ach_window.destroy,
             bg=self.colors["button"],
             fg=self.colors["fg"],
-            padx=20,
-            pady=5
+            activebackground=self.colors["button_hover"],
+            activeforeground=self.colors["fg"],
+            relief="flat",
+            padx=30,
+            pady=8,
+            cursor="hand2",
+            font=("Arial", 11)
         )
         close_button.pack(pady=15)
     
@@ -949,6 +1052,11 @@ class PomodoroTimer:
         settings_window.geometry("450x550")
         settings_window.configure(bg=self.colors["bg"])
         settings_window.resizable(False, False)
+
+        def validate_number(char):
+            return char.isdigit() or char == ""
+
+        validation = settings_window.register(validate_number)
 
         tab_control = ttk.Notebook(settings_window)
         
@@ -989,7 +1097,9 @@ class PomodoroTimer:
             settings_frame,
             textvariable=work_var,
             width=10,
-            font=("Arial", 10)
+            font=("Arial", 10),
+            validate="key",
+            validatecommand=(validation, "%P")
         )
         work_entry.grid(row=0, column=1, padx=10, pady=5)
 
@@ -1007,7 +1117,9 @@ class PomodoroTimer:
             settings_frame,
             textvariable=short_var,
             width=10,
-            font=("Arial", 10)
+            font=("Arial", 10),
+            validate="key",
+            validatecommand=(validation, "%P")
         )
         short_entry.grid(row=1, column=1, padx=10, pady=5)
 
@@ -1025,7 +1137,9 @@ class PomodoroTimer:
             settings_frame,
             textvariable=long_var,
             width=10,
-            font=("Arial", 10)
+            font=("Arial", 10),
+            validate="key",
+            validatecommand=(validation, "%P")
         )
         long_entry.grid(row=2, column=1, padx=10, pady=5)
 
@@ -1047,16 +1161,24 @@ class PomodoroTimer:
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
 
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind("<MouseWheel>", _on_mousewheel)
+        canvas.create_window((0,0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
 
         theme_frame = scrollable_frame
 
         theme_var = tk.StringVar(value=self.current_theme)
+
+        sorted_themes = sorted(
+            self.THEMES.items(),
+            key=lambda x: self.get_brightness(x[1]["bg"])
+        )
         
         row = 0
         col = 0
-        for theme_name in self.THEMES.keys():
+        for theme_name, theme_colors in sorted_themes:
             theme_btn = tk.Radiobutton(
                 theme_frame,
                 text=theme_name,
@@ -1069,8 +1191,22 @@ class PomodoroTimer:
             )
             theme_btn.grid(row=row, column=col, padx=10, pady=3, sticky="w")
             
-            colors_preview = tk.Frame(theme_frame, bg=self.THEMES[theme_name]["bg"], width=20, height=15)
-            colors_preview.grid(row=row, column=col+1, padx=5, pady=3)
+            preview_frame = tk.Frame(
+                theme_frame,
+                bg=self.colors["fg"],
+                width=24,
+                height=19
+            )
+            preview_frame.grid(row=row, column=col+1, padx=5, pady=3)
+            preview_frame.grid_propagate(False)
+
+            colors_preview = tk.Frame(
+                preview_frame,
+                bg=theme_colors["bg"],
+                width=20,
+                height=15
+            )
+            colors_preview.place(x=2, y=2)
             
             col += 2
             if col > 3:
@@ -1128,10 +1264,14 @@ class PomodoroTimer:
         button_frame.pack(pady=20)
         
         def save_and_close():
-            if work_var.get() > 0 and short_var.get() > 0 and long_var.get() > 0:
-                self.WORK_MINUTES = work_var.get()
-                self.SHORT_BREAK_MINUTES = short_var.get()
-                self.LONG_BREAK_MINUTES = long_var.get()
+            work = work_var.get()
+            short = short_var.get()
+            long = long_var.get()
+            
+            if 1 <= work <= 999 and 1 <= short <= 999 and 1 <= long <= 999:
+                self.WORK_MINUTES = work
+                self.SHORT_BREAK_MINUTES = short
+                self.LONG_BREAK_MINUTES = long
 
                 self.work_time = self.WORK_MINUTES * 60
                 self.short_break = self.SHORT_BREAK_MINUTES * 60
@@ -1155,7 +1295,7 @@ class PomodoroTimer:
                 
                 settings_window.destroy()
             else:
-                messagebox.showerror("Ошибка", "Все значения должны быть положительными!")
+                messagebox.showerror("Ошибка", "Значения должны быть от 1 до 999!")
         
         save_button = tk.Button(
             button_frame,
