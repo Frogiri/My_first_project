@@ -1,0 +1,37 @@
+{
+    "today_pomodoros": 0,
+    "total_pomodoros": 3,
+    "last_date": "2026-02-21",
+    "achievements": {
+        "first_pomodoro": {
+            "unlocked": false
+        },
+        "early_bird": {
+            "unlocked": false,
+            "progress": 0
+        },
+        "marathon": {
+            "unlocked": false,
+            "progress": 0
+        },
+        "no_pause": {
+            "unlocked": false,
+            "progress": 0
+        },
+        "workaholic": {
+            "unlocked": false,
+            "progress": 0
+        },
+        "night_owl": {
+            "unlocked": false
+        },
+        "master_focus": {
+            "unlocked": false,
+            "progress": 0
+        },
+        "colorful": {
+            "unlocked": false,
+            "progress": 0
+        }
+    }
+}
